@@ -37,7 +37,7 @@ def run_simulation(
     annual_spend: float = 30000.0,
     baseline_inflation: float = 0.025,
     inflation_shock: bool = False,
-    medical_cost: float = 0.0,  # <-- CONVERTED TO FLOAT
+    medical_cost: float = 0.0,  
     career_shock: bool = False,
     extra_work_years: int = 0,
     extra_annual_savings: float = 0.0,
@@ -58,12 +58,18 @@ def run_simulation(
     
     np.random.seed(42)
     
+    # DYNAMIC SHOCK TIMELINES
+    medical_shock_age = current_age + 5
+    career_freeze_start = current_age + 1
+    career_freeze_end = current_age + 2
+    
     for t in range(total_years):
         age_now = current_age + t
         market_returns = np.random.normal(mean_market_return, market_volatility, num_simulations)
         cost_multiplier = (1.0 + eff_inflation) ** t
         
-        is_career_interrupted = career_shock and (40 <= age_now <= 41)
+        # MATH FIX: Career freeze happens in the next 1-2 years
+        is_career_interrupted = career_shock and (career_freeze_start <= age_now <= career_freeze_end)
         
         if age_now < effective_retire_age:
             yearly_inflow = 0.0 if is_career_interrupted else eff_contribution
@@ -72,8 +78,8 @@ def run_simulation(
             yearly_outflow = annual_spend * cost_multiplier
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t] * (1.0 + market_returns) - yearly_outflow)
             
-        # <-- SLIDER LOGIC APPLIED HERE
-        if medical_cost > 0 and age_now == 48:
+        # MATH FIX: Medical shock drops portfolio value 5 years from now
+        if medical_cost > 0 and age_now == medical_shock_age:
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t + 1] - medical_cost)
 
     p10 = np.percentile(trajectories, 10, axis=0).tolist()
