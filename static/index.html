@@ -51,19 +51,19 @@
         <div class="space-y-4">
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Current Age <span id="val_age">30</span></label>
-            <input id="in_age" type="range" min="20" max="50" value="30" class="w-full accent-emerald-500">
+            <input id="in_age" type="range" min="20" max="60" value="30" class="w-full accent-emerald-500">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Target Retirement Age <span id="val_retire">60</span></label>
-            <input id="in_retire" type="range" min="50" max="75" value="60" class="w-full accent-emerald-500">
+            <input id="in_retire" type="range" min="45" max="80" value="60" class="w-full accent-emerald-500">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Current Savings ($) <span id="val_savings">50,000</span></label>
-            <input id="in_savings" type="range" min="5000" max="250000" step="5000" value="50000" class="w-full accent-emerald-500">
+            <input id="in_savings" type="range" min="5000" max="500000" step="5000" value="50000" class="w-full accent-emerald-500">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Annual Contribution ($) <span id="val_contrib">15,000</span></label>
-            <input id="in_contrib" type="range" min="2000" max="50000" step="1000" value="15000" class="w-full accent-emerald-500">
+            <input id="in_contrib" type="range" min="1000" max="100000" step="1000" value="15000" class="w-full accent-emerald-500">
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@
     function updateDashboard(data) {
       const isSurplus = data.status === 'Surplus';
       
-      // NEW: Gamified Grading Logic
+      // Gamified Grading Logic
       let grade = 'F';
       let gradeColor = 'text-rose-500';
       if (data.success_rate >= 90) { grade = 'A+'; gradeColor = 'text-emerald-400'; }
@@ -351,7 +351,7 @@
     toggleShock('btn_medical', 'badge_medical', 'medical_shock');
     toggleShock('btn_career', 'badge_career', 'career_shock');
 
-    // Chat handling with fake typing delay
+    // Chat handling with animated typing indicator and two-way slider synchronization
     async function sendMessage(text) {
       if (!text.trim()) return;
       const history = document.getElementById('chat_history');
@@ -379,29 +379,66 @@
       });
       const data = await res.json();
 
-      // Fake network/thinking delay for effect
+      // Simulated network/thinking delay for polish
       setTimeout(() => {
-        document.getElementById(typingId).remove(); // Remove typing indicator
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
         
-        if (data.state_override) {
+        if (data.state_override && Object.keys(data.state_override).length > 0) {
+          // Merge AI state override into runtime state
           Object.assign(state, data.state_override);
-          document.getElementById('badge_inflation').textContent = state.inflation_shock ? 'ACTIVE' : 'OFF';
-          document.getElementById('badge_medical').textContent = state.medical_shock ? 'ACTIVE' : 'OFF';
-          document.getElementById('badge_career').textContent = state.career_shock ? 'ACTIVE' : 'OFF';
-          
-          document.getElementById('badge_inflation').className = state.inflation_shock ? 'px-2 py-0.5 rounded text-[10px] bg-rose-500 text-white font-bold' : 'px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400';
-          document.getElementById('badge_medical').className = state.medical_shock ? 'px-2 py-0.5 rounded text-[10px] bg-rose-500 text-white font-bold' : 'px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400';
-          
+
+          // Convert additive adjustments into base values so physical sliders update
+          if (state.extra_work_years) {
+            state.retire_age = (state.retire_age || 60) + state.extra_work_years;
+            state.extra_work_years = 0;
+          }
+          if (state.extra_annual_savings) {
+            state.annual_contribution = (state.annual_contribution || 15000) + state.extra_annual_savings;
+            state.extra_annual_savings = 0;
+          }
+
+          // Two-Way Sync Helper: Adjust limits and visually move physical sliders
+          const syncSlider = (id, labelId, val) => {
+            const input = document.getElementById(id);
+            const label = document.getElementById(labelId);
+            if (input && label && val !== undefined) {
+              const numVal = Number(val);
+              if (numVal > Number(input.max)) input.max = numVal;
+              if (numVal < Number(input.min)) input.min = numVal;
+              input.value = numVal;
+              label.textContent = numVal.toLocaleString();
+            }
+          };
+
+          syncSlider('in_age', 'val_age', state.current_age);
+          syncSlider('in_retire', 'val_retire', state.retire_age);
+          syncSlider('in_savings', 'val_savings', state.current_savings);
+          syncSlider('in_contrib', 'val_contrib', state.annual_contribution);
+
+          // Update Shock Badges
+          const updateBadge = (id, isActive) => {
+            const badge = document.getElementById(id);
+            if (!badge) return;
+            badge.textContent = isActive ? 'ACTIVE' : 'OFF';
+            badge.className = isActive 
+              ? 'px-2 py-0.5 rounded text-[10px] bg-rose-500 text-white font-bold' 
+              : 'px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400';
+          };
+          updateBadge('badge_inflation', state.inflation_shock);
+          updateBadge('badge_medical', state.medical_shock);
+          updateBadge('badge_career', state.career_shock);
+
           triggerSimulation();
         }
 
-        // Bot reply
+        // Bot reply bubble
         const botBubble = document.createElement('div');
         botBubble.className = 'bg-slate-800/90 border border-emerald-500/30 p-2.5 rounded-lg mr-6 text-slate-200 text-xs shadow-md';
         botBubble.textContent = data.reply;
         history.appendChild(botBubble);
         history.scrollTop = history.scrollHeight;
-      }, 1200); // 1.2 second fake delay
+      }, 1200);
     }
 
     function sendQuickPrompt(prompt) {
@@ -423,7 +460,7 @@
       }
     });
 
-    // Start
+    // Initial load
     initChart();
     triggerSimulation();
   </script>
