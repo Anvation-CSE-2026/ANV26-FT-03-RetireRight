@@ -46,28 +46,22 @@
       100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
-    /* --- SLEEK MODERN SCROLLBAR --- */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* TOOLTIP STYLES */
+    .tooltip-content {
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.2s, visibility 0.2s;
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-    /* Hide scrollbar for quick prompt row */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
+    .group:hover .tooltip-content {
+      visibility: visible;
+      opacity: 1;
     }
   </style>
 </head>
@@ -93,20 +87,19 @@
     </div>
   </header>
 
-  <!-- AI FLOATING ACTION BUTTON -->
+  <!-- AI FLOATING ACTION BUTTON (Now a Chat Bubble) -->
   <button onclick="toggleAIModal(true)" class="fixed bottom-10 right-10 z-30 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full p-4 shadow-[0_0_30px_rgba(79,70,229,0.8)] flex items-center justify-center transition hover:scale-110">
-    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
   </button>
 
   <!-- ULTRA-MODERN AI CHAT MODAL -->
   <div id="ai_modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xl transition-opacity p-4">
     <div class="bg-[#0b1120]/95 backdrop-blur-3xl w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col h-[80vh] shadow-[0_20px_70px_-10px_rgba(79,70,229,0.3)] border border-white/10 ring-1 ring-white/5">
-      
-      <!-- Sleek Header -->
       <div class="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
         <div class="flex items-center space-x-4">
           <div class="w-10 h-10 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-inner">
-            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> 
+            <!-- Modern Chat Bubble Icon -->
+            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> 
           </div>
           <div>
             <h2 class="text-lg font-semibold text-white tracking-wide">AI Copilot</h2>
@@ -116,22 +109,18 @@
         <button onclick="toggleAIModal(false)" class="text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full p-2 transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
       </div>
 
-      <!-- Breathable Chat History -->
       <div id="chat_history" class="flex-1 p-6 overflow-y-auto space-y-5 text-[14px]">
         <div class="bg-slate-800/60 border border-white/5 p-4 rounded-2xl rounded-tl-sm text-indigo-50 max-w-[80%] leading-relaxed shadow-sm">
           System online. Ask me to fix your shortfall, toggle shocks, or say <span class="text-emerald-400 font-semibold">"Lower my Target Corpus to $1 Million"</span> to reduce your required retirement burden.
         </div>
       </div>
 
-      <!-- Unified Input Area -->
       <div class="p-4 bg-slate-900/80 border-t border-white/5">
-        <!-- Quick Action Chips -->
         <div class="flex space-x-2 mb-4 overflow-x-auto pb-1 no-scrollbar px-2">
           <button onclick="sendQuickPrompt('Fix my shortfall completely')" class="whitespace-nowrap text-xs bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 px-4 py-1.5 rounded-full transition-all font-medium tracking-wide">✨ Auto-Fix Shortfall</button>
           <button onclick="sendQuickPrompt('Lower my Target Corpus to $1 Million')" class="whitespace-nowrap text-xs bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 px-4 py-1.5 rounded-full transition-all font-medium tracking-wide">🎯 Lower Target to $1M</button>
         </div>
         
-        <!-- Seamless Input Pill -->
         <div class="relative flex items-center bg-slate-950 border border-white/10 rounded-2xl p-1.5 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/50 transition-all shadow-inner mx-2 mb-2">
           <input id="chat_input" type="text" placeholder="Message Copilot..." class="flex-1 bg-transparent px-4 py-2.5 text-sm text-white focus:outline-none placeholder-slate-500">
           <button id="chat_submit" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-colors shadow-sm ml-2">
@@ -142,10 +131,9 @@
     </div>
   </div>
 
-  <!-- STATIC SNAPSHOT DIAGNOSTIC REPORT -->
+  <!-- DIAGNOSTIC REPORT MODAL -->
   <div id="remedy_modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/85 backdrop-blur-xl transition-opacity p-4">
     <div class="bg-slate-900 border border-rose-500/40 w-full max-w-5xl rounded-3xl shadow-[0_0_50px_rgba(244,63,94,0.2)] flex flex-col overflow-hidden max-h-[90vh]">
-      
       <div class="p-6 border-b border-white/5 bg-rose-500/5 flex justify-between items-center">
         <div class="flex items-center space-x-4">
           <div class="w-10 h-10 bg-rose-500/20 rounded-2xl flex items-center justify-center border border-rose-500/30">
@@ -160,8 +148,6 @@
       </div>
       
       <div class="p-8 grid grid-cols-2 gap-8 bg-slate-950/50 overflow-y-auto">
-        
-        <!-- Snapshot 1: Failing Inputs -->
         <div class="space-y-4">
           <h3 class="text-sm font-bold text-slate-300 uppercase tracking-widest border-b border-white/10 pb-2">1. Input Vulnerability</h3>
           <p class="text-xs text-slate-400 leading-relaxed">The current input configuration causes a mathematical failure. Notice the critically low inflow or short time horizon compared to the target spend.</p>
@@ -184,7 +170,6 @@
                 <div class="w-full bg-slate-800 h-1 mt-1.5 rounded-full"></div>
               </div>
             </div>
-            
             <div class="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
               <span class="bg-rose-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-lg mr-2 uppercase tracking-wide">Insufficient Capital Velocity</span>
               <svg class="w-6 h-6 text-rose-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M7 16l-4-4m0 0l4-4m-4 4h18"></path></svg>
@@ -192,14 +177,11 @@
           </div>
         </div>
 
-        <!-- Snapshot 2: Failing Graph -->
         <div class="space-y-4">
           <h3 class="text-sm font-bold text-slate-300 uppercase tracking-widest border-b border-white/10 pb-2">2. Trajectory Collapse</h3>
           <p class="text-xs text-slate-400 leading-relaxed">The Monte Carlo simulation visualizes the exact point of failure based on the frozen inputs to the left.</p>
-          
           <div class="relative bg-slate-900 border border-slate-700 p-3 rounded-2xl mt-4 flex items-center justify-center shadow-inner">
             <img id="snapshot_graph" class="w-full h-auto opacity-80 rounded-xl" alt="Failing Graph Snapshot">
-            
             <div class="absolute bottom-6 right-6 flex flex-col items-center">
               <span id="snap_depletion_text" class="bg-rose-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-lg mb-2 uppercase tracking-wide">Portfolio hits $0</span>
               <svg class="w-8 h-8 text-rose-500 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
@@ -218,9 +200,7 @@
     </div>
   </div>
 
-  <!-- FLOATING AI TOAST -->
-  <div id="ai_toast" class="fixed top-24 right-8 glass-panel p-5 rounded-2xl border border-indigo-500/50 shadow-[0_0_30px_rgba(79,70,229,0.4)] z-50 hidden max-w-sm text-sm text-white transform transition-transform duration-300 translate-x-full">
-  </div>
+  <div id="ai_toast" class="fixed top-24 right-8 glass-panel p-5 rounded-2xl border border-indigo-500/50 shadow-[0_0_30px_rgba(79,70,229,0.4)] z-50 hidden max-w-sm text-sm text-white transform transition-transform duration-300 translate-x-full"></div>
 
   <!-- MAIN DASHBOARD -->
   <main class="flex-1 grid grid-cols-12 gap-6 p-6 lg:p-8 relative z-10">
@@ -283,26 +263,58 @@
     <!-- Analytics Engine (Center Expanded) -->
     <section class="col-span-12 lg:col-span-9 space-y-6 flex flex-col">
       <div class="grid grid-cols-3 gap-6">
-        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center items-center text-center relative overflow-hidden">
-          <div class="absolute inset-0 bg-gradient-to-t from-emerald-500/10 to-transparent"></div>
-          <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-2">Probability of Success</p>
-          <p id="out_success" class="text-5xl font-extrabold neon-text text-emerald-400">0%</p>
+        
+        <!-- Prob of Success -->
+        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center items-center text-center relative group">
+          <div class="absolute inset-0 bg-gradient-to-t from-emerald-500/10 to-transparent rounded-3xl"></div>
+          <div class="flex items-center justify-center space-x-1 cursor-help mb-2 relative z-10">
+            <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Probability of Success</p>
+            <div class="relative">
+              <svg class="w-3.5 h-3.5 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <!-- Tooltip: dropped downwards, z-index boosted -->
+              <div class="tooltip-content absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] normal-case tracking-normal">
+                The percentage of our 200 simulated lifetimes where your wealth does not hit $0 before age 85.
+              </div>
+            </div>
+          </div>
+          <p id="out_success" class="text-5xl font-extrabold neon-text text-emerald-400 relative z-10">0%</p>
         </div>
-        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center text-center">
-          <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-2">Status</p>
+
+        <!-- Status -->
+        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center text-center group">
+          <div class="flex items-center justify-center space-x-1 cursor-help mb-2">
+            <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Status</p>
+          </div>
           <p id="out_status" class="text-3xl font-bold text-emerald-400">Surplus</p>
           <p id="out_gap" class="text-sm text-slate-400 mt-2" data-val="0">+$0</p>
         </div>
-        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center text-center">
-          <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-2">Target Corpus</p>
+
+        <!-- Target Corpus -->
+        <div class="glass-panel rounded-3xl p-6 flex flex-col justify-center text-center group">
+          <div class="flex items-center justify-center space-x-1 cursor-help mb-2">
+            <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Target Corpus</p>
+            <div class="relative">
+              <svg class="w-3.5 h-3.5 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <!-- Tooltip: dropped downwards, z-index boosted -->
+              <div class="tooltip-content absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-52 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] normal-case tracking-normal">
+                Based on the Rule of 25. The exact pile of cash required on the day you retire to safely fund your Target Lifestyle Spend (adjusted for inflation) for the rest of your life.
+              </div>
+            </div>
+          </div>
           <p id="out_target" class="text-3xl font-bold text-white tracking-wider" data-val="0">$0</p>
           <p class="text-sm text-slate-400 mt-2">Required at retirement</p>
         </div>
       </div>
 
       <div class="glass-panel rounded-3xl p-2 flex-1 flex flex-col h-[400px]">
-        <div class="flex border-b border-white/10 px-6 py-4">
-          <h2 class="text-sm font-bold tracking-wide text-white mr-6">Monte Carlo Engine (Expanded View)</h2>
+        <div class="flex border-b border-white/10 px-6 py-4 items-center group">
+          <h2 class="text-sm font-bold tracking-wide text-white mr-2">Monte Carlo Engine (Expanded View)</h2>
+          <div class="relative cursor-help mr-6">
+            <svg class="w-4 h-4 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div class="tooltip-content absolute top-full left-0 mt-2 w-64 p-3 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] font-normal">
+              Instead of assuming a flat average return, this engine runs 200 concurrent simulations seeded with actual, live S&P 500 volatility data to visualize the chaotic reality of market swings.
+            </div>
+          </div>
           <span class="text-xs text-emerald-400 border-l border-white/20 pl-6 flex items-center">
              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-2"></span> 200 Trajectories computed
           </span>
@@ -314,7 +326,15 @@
 
       <div id="glidepath_card" class="glass-panel rounded-3xl p-6 grid grid-cols-2 gap-8 items-center transition-all duration-300 relative bg-slate-900">
         <div>
-          <h2 class="text-base font-bold tracking-wide text-white mb-2">Dynamic Asset Glidepath</h2>
+          <div class="flex items-center mb-2 group">
+            <h2 class="text-base font-bold tracking-wide text-white mr-2">Dynamic Asset Glidepath</h2>
+            <div class="relative cursor-help">
+              <svg class="w-4 h-4 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <div class="tooltip-content absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] font-normal">
+                Based on the Rule of 110. As you age, the engine automatically rebalances your capital away from volatile equities and into safer bonds to protect your baseline corpus.
+              </div>
+            </div>
+          </div>
           <p class="text-sm text-slate-400 mb-6">Engine calculates optimal capital allocation based on risk horizon.</p>
           <div id="recs_container" class="space-y-3 text-sm"></div>
         </div>
@@ -526,9 +546,18 @@
         
         const recsBox = document.getElementById('recs_container');
         recsBox.innerHTML = `
-          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-blue-500"><span class="text-blue-400 font-bold tracking-wide">Equities:</span> <span class="font-medium">${data.allocation.data[0]}%</span></div>
-          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-purple-500"><span class="text-purple-400 font-bold tracking-wide">Bonds:</span> <span class="font-medium">${data.allocation.data[1]}%</span></div>
-          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-emerald-500"><span class="text-emerald-400 font-bold tracking-wide">Cash:</span> <span class="font-medium">${data.allocation.data[2]}%</span></div>
+          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-blue-500 group relative cursor-help">
+            <span class="text-blue-400 font-bold tracking-wide">Equities:</span> <span class="font-medium">${data.allocation.data[0]}%</span>
+            <div class="tooltip-content absolute bottom-full left-0 mb-2 w-48 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 z-[100] font-normal">High risk, high reward assets like S&P 500 Index Funds. Primary driver of portfolio growth.</div>
+          </div>
+          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-purple-500 group relative cursor-help">
+            <span class="text-purple-400 font-bold tracking-wide">Bonds:</span> <span class="font-medium">${data.allocation.data[1]}%</span>
+            <div class="tooltip-content absolute bottom-full left-0 mb-2 w-48 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 z-[100] font-normal">Low risk, stable fixed-income assets. Used to anchor the portfolio against market crashes.</div>
+          </div>
+          <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border-l-4 border-emerald-500 group relative cursor-help">
+            <span class="text-emerald-400 font-bold tracking-wide">Cash:</span> <span class="font-medium">${data.allocation.data[2]}%</span>
+            <div class="tooltip-content absolute bottom-full left-0 mb-2 w-48 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 z-[100] font-normal">Zero risk, highly liquid capital. Required to weather immediate shocks or medical emergencies.</div>
+          </div>
         `;
       }
     }
@@ -557,7 +586,7 @@
     };
     toggleShock('btn_inflation', 'badge_inflation', 'inflation_shock');
     toggleShock('btn_medical', 'badge_medical', 'medical_shock');
-    toggleShock('btn_career', 'badge_career', 'career_shock');
+    toggleShock('btn_career', 'career_shock');
 
     function animateSlider(id, labelId, targetVal) {
       const input = document.getElementById(id);
@@ -582,7 +611,6 @@
       
       const history = document.getElementById('chat_history');
       const userBubble = document.createElement('div');
-      // Sleek user bubble
       userBubble.className = 'bg-gradient-to-r from-indigo-500 to-blue-500 p-4 rounded-2xl rounded-tr-sm ml-auto text-white shadow-md max-w-[80%] leading-relaxed text-right';
       userBubble.textContent = text;
       history.appendChild(userBubble);
@@ -591,13 +619,11 @@
       const typingId = 'typing_' + Date.now();
       const typingBubble = document.createElement('div');
       typingBubble.id = typingId;
-      // Sleek typing indicator bubble
       typingBubble.className = 'bg-slate-800/60 border border-white/5 p-4 rounded-2xl rounded-tl-sm mr-auto text-slate-400 flex space-x-2 w-20 items-center justify-center';
       typingBubble.innerHTML = `<div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></div><div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" style="animation-delay:0.2s"></div><div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" style="animation-delay:0.4s"></div>`;
       history.appendChild(typingBubble);
       history.scrollTop = history.scrollHeight;
       
-      // Auto-hide modal immediately to show the magic happening
       setTimeout(() => toggleAIModal(false), 800);
 
       const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, current_state: state }) });
@@ -621,7 +647,6 @@
         }
 
         const botBubble = document.createElement('div');
-        // Sleek AI bubble
         botBubble.className = 'bg-slate-800/60 border border-white/5 p-4 rounded-2xl rounded-tl-sm text-indigo-50 max-w-[80%] leading-relaxed shadow-sm';
         botBubble.textContent = data.reply;
         history.appendChild(botBubble);
