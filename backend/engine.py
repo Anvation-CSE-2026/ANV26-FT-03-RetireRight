@@ -1,4 +1,26 @@
 import numpy as np
+import yfinance as yf
+
+# Global cache for live market data so we don't spam the API on every slider move
+MARKET_DATA = {"mean_return": 0.08, "volatility": 0.12, "is_live": False}
+
+try:
+    print("Fetching live S&P 500 market data from Yahoo Finance...")
+    sp500 = yf.Ticker("^GSPC")
+    hist = sp500.history(period="1y")
+    daily_returns = hist['Close'].pct_change().dropna()
+    
+    # Calculate live annual volatility and return
+    live_vol = float(daily_returns.std() * np.sqrt(252))
+    live_ret = float(daily_returns.mean() * 252)
+    
+    # Clamp extreme values so a current market crash doesn't permanently break the hackathon demo
+    MARKET_DATA["mean_return"] = max(0.05, min(live_ret, 0.15))
+    MARKET_DATA["volatility"] = max(0.08, min(live_vol, 0.25))
+    MARKET_DATA["is_live"] = True
+    print(f"SUCCESS: Live Data Active. Return: {MARKET_DATA['mean_return']:.2%}, Volatility: {MARKET_DATA['volatility']:.2%}")
+except Exception as e:
+    print("WARNING: Could not connect to live market. Using static historical baseline.")
 
 def run_simulation(
     current_age: int = 30,
@@ -19,83 +41,56 @@ def run_simulation(
     total_years = death_age - current_age
     ages = list(range(current_age, death_age + 1))
     
-    # Financial parameters
-    mean_market_return = 0.08
-    market_volatility = 0.12
+    # Inject Live Market Data
+    mean_market_return = MARKET_DATA["mean_return"]
+    market_volatility = MARKET_DATA["volatility"]
     
-    # Effective inflation and contribution
     eff_inflation = baseline_inflation + (0.04 if inflation_shock else 0.0)
     eff_contribution = annual_contribution + extra_annual_savings
     
-    # Trajectory matrix: [simulations, total_years + 1]
     trajectories = np.zeros((num_simulations, total_years + 1))
     trajectories[:, 0] = current_savings
     
-    np.random.seed(42)  # Consistent demo reproducibility
+    np.random.seed(42)  
     
     for t in range(total_years):
         age_now = current_age + t
-        # Random annual market return for each simulation
         market_returns = np.random.normal(mean_market_return, market_volatility, num_simulations)
         cost_multiplier = (1.0 + eff_inflation) ** t
         
-        # Apply Career Shock (2 years of zero income/savings at age 40-41)
         is_career_interrupted = career_shock and (40 <= age_now <= 41)
         
-        # Working Phase
         if age_now < effective_retire_age:
             yearly_inflow = 0.0 if is_career_interrupted else eff_contribution
             trajectories[:, t + 1] = trajectories[:, t] * (1.0 + market_returns) + yearly_inflow
-        # Retirement Phase
         else:
             yearly_outflow = annual_spend * cost_multiplier
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t] * (1.0 + market_returns) - yearly_outflow)
             
-        # Apply Medical Shock (One-time lump sum expense of $45,000 at age 48)
         if medical_shock and age_now == 48:
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t + 1] - 45000.0)
 
-    # Statistical percentiles across 200 runs
-    p10 = np.percentile(trajectories, 10, axis=0).tolist()  # Pessimistic
-    p50 = np.percentile(trajectories, 50, axis=0).tolist()  # Median 
-    p90 = np.percentile(trajectories, 90, axis=0).tolist()  # Optimistic
+    p10 = np.percentile(trajectories, 10, axis=0).tolist() 
+    p50 = np.percentile(trajectories, 50, axis=0).tolist() 
+    p90 = np.percentile(trajectories, 90, axis=0).tolist() 
 
-    # Metric evaluation at retirement age
     retire_index = min(effective_retire_age - current_age, total_years)
     median_corpus_at_retire = p50[retire_index]
-    
-    # Target corpus based on 25x adjusted retirement spending (4% rule)
     target_corpus = (annual_spend * ((1.0 + eff_inflation) ** retire_index)) * 25.0
     gap = median_corpus_at_retire - target_corpus
-    
-    # Success probability (% of simulations solvent at age 85)
     success_rate = float(np.sum(trajectories[:, -1] > 0) / num_simulations * 100.0)
 
-    # Actionable adjustment engine
     recommendations = []
     if gap < 0:
-        recommendations.append({
-            "action": "Delay Retirement",
-            "detail": "Delay retirement by 3 years to continue compounding.",
-        })
-        recommendations.append({
-            "action": "Boost Savings",
-            "detail": f"Increase savings by $3,000/year to recover baseline.",
-        })
+        recommendations.append({"action": "Delay Retirement", "detail": "Delay retirement by 3 years."})
+        recommendations.append({"action": "Boost Savings", "detail": "Increase savings by $3,000/year."})
     else:
-        recommendations.append({
-            "action": "Plan Optimized",
-            "detail": "Surplus achieved. Capital allocation looks healthy.",
-        })
+        recommendations.append({"action": "Plan Optimized", "detail": f"Surplus achieved using live market data (Vol: {market_volatility:.1%})."})
 
     return {
-        "ages": ages,
-        "p10_pessimistic": [round(val, 2) for val in p10],
-        "p50_median": [round(val, 2) for val in p50],
-        "p90_optimistic": [round(val, 2) for val in p90],
-        "target_corpus": round(target_corpus, 2),
-        "gap": round(gap, 2),
-        "status": "Surplus" if gap >= 0 else "Shortfall",
-        "success_rate": round(success_rate, 1),
+        "ages": ages, "p10_pessimistic": [round(val, 2) for val in p10],
+        "p50_median": [round(val, 2) for val in p50], "p90_optimistic": [round(val, 2) for val in p90],
+        "target_corpus": round(target_corpus, 2), "gap": round(gap, 2),
+        "status": "Surplus" if gap >= 0 else "Shortfall", "success_rate": round(success_rate, 1),
         "recommendations": recommendations
     }

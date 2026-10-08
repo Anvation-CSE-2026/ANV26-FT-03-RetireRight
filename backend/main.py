@@ -1,13 +1,26 @@
+import os
+import json
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from google import genai
 from backend.engine import run_simulation
 
 app = FastAPI(title="RetireRight AI")
-
-# Serve UI static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# --- REAL LLM INTEGRATION (Modern SDK) ---
+GEMINI_API_KEY = "AQ.Ab8RN6LDimElRaS7KW4Waeicm7z_skxgI7d8nnZu_Zej9329IQ"
+
+client = None
+try:
+    if GEMINI_API_KEY:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        print("\n✅ SUCCESS: Connected to Gemini using the new google-genai SDK!\n")
+except Exception as e:
+    print(f"\n❌ FAILED to initialize Gemini Client: {e}\n")
+
 
 class PlanRequest(BaseModel):
     current_age: int = 30
@@ -32,53 +45,75 @@ def serve_index():
 
 @app.post("/api/simulate")
 def simulate_plan(payload: PlanRequest):
-    result = run_simulation(
-        current_age=payload.current_age,
-        retire_age=payload.retire_age,
-        current_savings=payload.current_savings,
-        annual_contribution=payload.annual_contribution,
-        annual_spend=payload.annual_spend,
-        baseline_inflation=payload.baseline_inflation,
-        inflation_shock=payload.inflation_shock,
-        medical_shock=payload.medical_shock,
-        career_shock=payload.career_shock,
-        extra_work_years=payload.extra_work_years,
-        extra_annual_savings=payload.extra_annual_savings
-    )
-    return result
+    return run_simulation(**payload.model_dump())
 
 @app.post("/api/chat")
 def handle_chat(query: ChatQuery):
     msg = query.message.lower()
     state = query.current_state.model_dump()
-    override = {}
-    reply = ""
-
-    if "fix" in msg or "shortfall" in msg or "help" in msg:
-        override = {"extra_work_years": 3, "extra_annual_savings": 3000.0}
-        reply = "I calculated two primary adjustments: Delaying retirement by 3 years and increasing savings by $3,000/year to recover your baseline goal. Would you like to apply this adjustment?"
-    elif "inflation" in msg:
-        override = {"inflation_shock": not state["inflation_shock"]}
-        mode = "applied" if override["inflation_shock"] else "removed"
-        reply = f"Inflation shock scenario (8% persistent inflation) has been {mode}. Watch the shortfall metric update on the dashboard."
-    elif "medical" in msg:
-        override = {"medical_shock": not state["medical_shock"]}
-        mode = "triggered" if override["medical_shock"] else "cleared"
-        reply = f"A $45,000 unforeseen medical emergency at age 48 has been {mode}."
-    elif "career" in msg or "job" in msg:
-        override = {"career_shock": not state["career_shock"]}
-        mode = "triggered" if override["career_shock"] else "cleared"
-        reply = f"A 2-year income freeze scenario at age 40 has been {mode}."
-    elif "reset" in msg:
-        override = {
-            "inflation_shock": False,
-            "medical_shock": False,
-            "career_shock": False,
-            "extra_work_years": 0,
-            "extra_annual_savings": 0.0
+    
+    if not client:
+        return {
+            "reply": "DIAGNOSTIC ERROR: Client not initialized. Check your API key.",
+            "state_override": {}
         }
-        reply = "Resetting simulation to your clean baseline financial assumptions."
-    else:
-        reply = "I can test life shocks or balance your retirement gap. Try asking: 'Simulate inflation shock', 'Add medical emergency', or 'How do I fix the shortfall?'"
+    
+    prompt = f"""
+    You are a financial AI. User profile:
+    {json.dumps(state)}
+    
+    User message: "{msg}"
+    
+    Respond ONLY with a raw JSON object (NO MARKDOWN). Do not wrap in ```json.
+    {{
+        "reply": "Your conversational advice.",
+        "state_override": {{}}
+    }}
+    """
+    
+    try:
+        # BULLETPROOF LOOP: Try every standard model name until one succeeds
+        response = None
+        last_error = ""
+        models_to_test = [
+            'gemini-1.5-pro', 
+            'gemini-2.0-flash',
+            'gemini-1.5-flash', 
+            'gemini-pro',
+            'gemini-3.5-flash'
+        ]
+        
+        for model_name in models_to_test:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                break  # Success! Break out of the loop
+            except Exception as inner_e:
+                last_error = str(inner_e)
+                continue  # 404 Error? Immediately try the next model
+                
+        if not response:
+            raise Exception(f"All models failed. Last API error: {last_error}")
 
-    return {"reply": reply, "state_override": override}
+        raw_text = response.text.strip()
+        
+        # Bruteforce markdown cleaner
+        if raw_text.startswith("```json"): raw_text = raw_text[7:]
+        if raw_text.startswith("```"): raw_text = raw_text[3:]
+        if raw_text.endswith("```"): raw_text = raw_text[:-3]
+        raw_text = raw_text.strip()
+        
+        ai_result = json.loads(raw_text)
+        
+        return {
+            "reply": ai_result.get("reply", "Plan updated successfully."),
+            "state_override": ai_result.get("state_override", {})
+        }
+    except Exception as e:
+        error_msg = str(e)
+        return {
+            "reply": f"DIAGNOSTIC ERROR: {error_msg}",
+            "state_override": {}
+        }
