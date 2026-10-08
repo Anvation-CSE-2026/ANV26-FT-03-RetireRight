@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>RetireRight AI - Life Path Planner</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+ <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     @media print {
@@ -13,6 +13,14 @@
       .bg-slate-900\/80 { background: white !important; border: 1px solid #e2e8f0 !important; }
       * { color: black !important; }
       canvas { max-height: 400px !important; }
+    }
+    .slider-pulse {
+      animation: pulse-border 1.2s ease-in-out;
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
   </style>
 </head>
@@ -45,25 +53,25 @@
     <section class="col-span-12 lg:col-span-3 space-y-6">
       
       <!-- Baseline Assumptions -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+      <div id="baseline_card" class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg transition-all duration-300">
         <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Financial Baseline</h2>
         
         <div class="space-y-4">
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Current Age <span id="val_age">30</span></label>
-            <input id="in_age" type="range" min="20" max="60" value="30" class="w-full accent-emerald-500">
+            <input id="in_age" type="range" min="20" max="65" value="30" class="w-full accent-emerald-500 transition-all">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Target Retirement Age <span id="val_retire">60</span></label>
-            <input id="in_retire" type="range" min="45" max="80" value="60" class="w-full accent-emerald-500">
+            <input id="in_retire" type="range" min="45" max="80" value="60" class="w-full accent-emerald-500 transition-all">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Current Savings ($) <span id="val_savings">50,000</span></label>
-            <input id="in_savings" type="range" min="5000" max="500000" step="5000" value="50000" class="w-full accent-emerald-500">
+            <input id="in_savings" type="range" min="0" max="500000" step="5000" value="50000" class="w-full accent-emerald-500 transition-all">
           </div>
           <div>
             <label class="text-xs text-slate-400 flex justify-between">Annual Contribution ($) <span id="val_contrib">15,000</span></label>
-            <input id="in_contrib" type="range" min="1000" max="100000" step="1000" value="15000" class="w-full accent-emerald-500">
+            <input id="in_contrib" type="range" min="1000" max="100000" step="1000" value="15000" class="w-full accent-emerald-500 transition-all">
           </div>
         </div>
       </div>
@@ -93,9 +101,8 @@
     <!-- Center Column: Visualization & Metrics (6 Cols) -->
     <section class="col-span-12 lg:col-span-6 space-y-6">
       
-      <!-- Upgraded Metric Cards with Gamified Grade -->
+      <!-- Metrics Cards -->
       <div class="grid grid-cols-4 gap-4">
-        <!-- GAMIFIED HEALTH SCORE -->
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden">
           <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl"></div>
           <p class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">Plan Grade</p>
@@ -166,7 +173,7 @@
         <button onclick="sendQuickPrompt('Simulate medical event')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">
           + Medical Event
         </button>
-        <button onclick="sendQuickPrompt('How do I fix this shortfall?')" class="text-[10px] bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 px-2 py-1 rounded">
+        <button onclick="sendQuickPrompt('How do I fix this shortfall?')" class="text-[10px] bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 px-2 py-1 rounded font-semibold">
           Fix Shortfall
         </button>
       </div>
@@ -273,7 +280,6 @@
     function updateDashboard(data) {
       const isSurplus = data.status === 'Surplus';
       
-      // Gamified Grading Logic
       let grade = 'F';
       let gradeColor = 'text-rose-500';
       if (data.success_rate >= 90) { grade = 'A+'; gradeColor = 'text-emerald-400'; }
@@ -298,7 +304,6 @@
       successEl.textContent = data.success_rate + '%';
       successEl.className = data.success_rate > 70 ? 'text-lg font-bold mt-1 text-emerald-400' : 'text-lg font-bold mt-1 text-rose-500';
 
-      // Recommendations
       const recsBox = document.getElementById('recs_container');
       recsBox.innerHTML = '';
       data.recommendations.forEach(rec => {
@@ -308,7 +313,6 @@
         recsBox.appendChild(item);
       });
 
-      // Chart
       chartInstance.data.labels = data.ages;
       chartInstance.data.datasets[0].data = data.p90_optimistic;
       chartInstance.data.datasets[1].data = data.p50_median;
@@ -324,11 +328,11 @@
       chartInstance.update();
     }
 
-    // Input slider event listeners
+    // Slider user inputs
     const bindSlider = (id, key, labelId) => {
       document.getElementById(id).addEventListener('input', (e) => {
         state[key] = parseFloat(e.target.value);
-        document.getElementById(labelId).textContent = state[key].toLocaleString();
+        document.getElementById(labelId).textContent = Math.round(state[key]).toLocaleString();
         triggerSimulation();
       });
     };
@@ -351,19 +355,47 @@
     toggleShock('btn_medical', 'badge_medical', 'medical_shock');
     toggleShock('btn_career', 'badge_career', 'career_shock');
 
-    // Chat handling with animated typing indicator and two-way slider synchronization
+    // Smoothly animate slider value transitions
+    function animateSlider(id, labelId, targetVal) {
+      const input = document.getElementById(id);
+      const label = document.getElementById(labelId);
+      if (!input || !label) return;
+
+      const numTarget = Math.round(Number(targetVal));
+      if (numTarget > Number(input.max)) input.max = Math.ceil(numTarget * 1.15);
+      if (numTarget < Number(input.min)) input.min = Math.floor(numTarget * 0.85);
+
+      const startVal = Number(input.value);
+      const diff = numTarget - startVal;
+      const steps = 18;
+      let currentStep = 0;
+
+      const stepInterval = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / steps;
+        const currentVal = Math.round(startVal + diff * progress);
+        input.value = currentVal;
+        label.textContent = currentVal.toLocaleString();
+
+        if (currentStep >= steps) {
+          clearInterval(stepInterval);
+          input.value = numTarget;
+          label.textContent = numTarget.toLocaleString();
+        }
+      }, 16);
+    }
+
+    // Chat handling
     async function sendMessage(text) {
       if (!text.trim()) return;
       const history = document.getElementById('chat_history');
       
-      // User message
       const userBubble = document.createElement('div');
       userBubble.className = 'bg-emerald-600 text-white p-2.5 rounded-lg ml-6 text-right text-xs shadow-md';
       userBubble.textContent = text;
       history.appendChild(userBubble);
       history.scrollTop = history.scrollHeight;
 
-      // AI Typing Indicator
       const typingId = 'typing_' + Date.now();
       const typingBubble = document.createElement('div');
       typingBubble.id = typingId;
@@ -379,42 +411,30 @@
       });
       const data = await res.json();
 
-      // Simulated network/thinking delay for polish
       setTimeout(() => {
         const typingEl = document.getElementById(typingId);
         if (typingEl) typingEl.remove();
         
         if (data.state_override && Object.keys(data.state_override).length > 0) {
-          // Merge AI state override into runtime state
+          const baselineCard = document.getElementById('baseline_card');
+          baselineCard.classList.add('slider-pulse', 'border-emerald-500/60');
+          setTimeout(() => baselineCard.classList.remove('slider-pulse', 'border-emerald-500/60'), 1300);
+
           Object.assign(state, data.state_override);
 
-          // Convert additive adjustments into base values so physical sliders update
-          if (state.extra_work_years) {
-            state.retire_age = (state.retire_age || 60) + state.extra_work_years;
-            state.extra_work_years = 0;
+          // Animate physical sliders to AI-suggested values
+          if (data.state_override.current_age !== undefined) {
+            animateSlider('in_age', 'val_age', state.current_age);
           }
-          if (state.extra_annual_savings) {
-            state.annual_contribution = (state.annual_contribution || 15000) + state.extra_annual_savings;
-            state.extra_annual_savings = 0;
+          if (data.state_override.retire_age !== undefined) {
+            animateSlider('in_retire', 'val_retire', state.retire_age);
           }
-
-          // Two-Way Sync Helper: Adjust limits and visually move physical sliders
-          const syncSlider = (id, labelId, val) => {
-            const input = document.getElementById(id);
-            const label = document.getElementById(labelId);
-            if (input && label && val !== undefined) {
-              const numVal = Number(val);
-              if (numVal > Number(input.max)) input.max = numVal;
-              if (numVal < Number(input.min)) input.min = numVal;
-              input.value = numVal;
-              label.textContent = numVal.toLocaleString();
-            }
-          };
-
-          syncSlider('in_age', 'val_age', state.current_age);
-          syncSlider('in_retire', 'val_retire', state.retire_age);
-          syncSlider('in_savings', 'val_savings', state.current_savings);
-          syncSlider('in_contrib', 'val_contrib', state.annual_contribution);
+          if (data.state_override.current_savings !== undefined) {
+            animateSlider('in_savings', 'val_savings', state.current_savings);
+          }
+          if (data.state_override.annual_contribution !== undefined) {
+            animateSlider('in_contrib', 'val_contrib', state.annual_contribution);
+          }
 
           // Update Shock Badges
           const updateBadge = (id, isActive) => {
@@ -432,13 +452,12 @@
           triggerSimulation();
         }
 
-        // Bot reply bubble
         const botBubble = document.createElement('div');
         botBubble.className = 'bg-slate-800/90 border border-emerald-500/30 p-2.5 rounded-lg mr-6 text-slate-200 text-xs shadow-md';
         botBubble.textContent = data.reply;
         history.appendChild(botBubble);
         history.scrollTop = history.scrollHeight;
-      }, 1200);
+      }, 1000);
     }
 
     function sendQuickPrompt(prompt) {
@@ -460,7 +479,6 @@
       }
     });
 
-    // Initial load
     initChart();
     triggerSimulation();
   </script>

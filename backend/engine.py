@@ -14,7 +14,7 @@ try:
     live_vol = float(daily_returns.std() * np.sqrt(252))
     live_ret = float(daily_returns.mean() * 252)
     
-    # Clamp extreme values so a current market crash doesn't permanently break the hackathon demo
+    # Clamp extreme values so market swings don't distort demo baseline
     MARKET_DATA["mean_return"] = max(0.05, min(live_ret, 0.15))
     MARKET_DATA["volatility"] = max(0.08, min(live_vol, 0.25))
     MARKET_DATA["is_live"] = True
@@ -41,7 +41,6 @@ def run_simulation(
     total_years = death_age - current_age
     ages = list(range(current_age, death_age + 1))
     
-    # Inject Live Market Data
     mean_market_return = MARKET_DATA["mean_return"]
     market_volatility = MARKET_DATA["volatility"]
     
@@ -51,7 +50,7 @@ def run_simulation(
     trajectories = np.zeros((num_simulations, total_years + 1))
     trajectories[:, 0] = current_savings
     
-    np.random.seed(42)  
+    np.random.seed(42)
     
     for t in range(total_years):
         age_now = current_age + t
@@ -70,9 +69,9 @@ def run_simulation(
         if medical_shock and age_now == 48:
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t + 1] - 45000.0)
 
-    p10 = np.percentile(trajectories, 10, axis=0).tolist() 
-    p50 = np.percentile(trajectories, 50, axis=0).tolist() 
-    p90 = np.percentile(trajectories, 90, axis=0).tolist() 
+    p10 = np.percentile(trajectories, 10, axis=0).tolist()
+    p50 = np.percentile(trajectories, 50, axis=0).tolist()
+    p90 = np.percentile(trajectories, 90, axis=0).tolist()
 
     retire_index = min(effective_retire_age - current_age, total_years)
     median_corpus_at_retire = p50[retire_index]
@@ -82,15 +81,19 @@ def run_simulation(
 
     recommendations = []
     if gap < 0:
-        recommendations.append({"action": "Delay Retirement", "detail": "Delay retirement by 3 years."})
-        recommendations.append({"action": "Boost Savings", "detail": "Increase savings by $3,000/year."})
+        recommendations.append({"action": "Delay Retirement", "detail": "Delay retirement by 3-5 years to allow investments to compound."})
+        recommendations.append({"action": "Boost Savings", "detail": "Increase annual contributions to rebuild portfolio reserves."})
     else:
         recommendations.append({"action": "Plan Optimized", "detail": f"Surplus achieved using live market data (Vol: {market_volatility:.1%})."})
 
     return {
-        "ages": ages, "p10_pessimistic": [round(val, 2) for val in p10],
-        "p50_median": [round(val, 2) for val in p50], "p90_optimistic": [round(val, 2) for val in p90],
-        "target_corpus": round(target_corpus, 2), "gap": round(gap, 2),
-        "status": "Surplus" if gap >= 0 else "Shortfall", "success_rate": round(success_rate, 1),
+        "ages": ages,
+        "p10_pessimistic": [round(val, 2) for val in p10],
+        "p50_median": [round(val, 2) for val in p50],
+        "p90_optimistic": [round(val, 2) for val in p90],
+        "target_corpus": round(target_corpus, 2),
+        "gap": round(gap, 2),
+        "status": "Surplus" if gap >= 0 else "Shortfall",
+        "success_rate": round(success_rate, 1),
         "recommendations": recommendations
     }
