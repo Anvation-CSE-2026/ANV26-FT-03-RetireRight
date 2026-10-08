@@ -1,26 +1,23 @@
 import numpy as np
 import yfinance as yf
 
-# Global cache for live market data so we don't spam the API on every slider move
+# Global cache for live market data
 MARKET_DATA = {"mean_return": 0.08, "volatility": 0.12, "is_live": False}
 
 try:
-    print("Fetching live S&P 500 market data from Yahoo Finance...")
+    print("Fetching live S&P 500 market data...")
     sp500 = yf.Ticker("^GSPC")
     hist = sp500.history(period="1y")
     daily_returns = hist['Close'].pct_change().dropna()
     
-    # Calculate live annual volatility and return
     live_vol = float(daily_returns.std() * np.sqrt(252))
     live_ret = float(daily_returns.mean() * 252)
     
-    # Clamp extreme values so market swings don't distort demo baseline
     MARKET_DATA["mean_return"] = max(0.05, min(live_ret, 0.15))
     MARKET_DATA["volatility"] = max(0.08, min(live_vol, 0.25))
     MARKET_DATA["is_live"] = True
-    print(f"SUCCESS: Live Data Active. Return: {MARKET_DATA['mean_return']:.2%}, Volatility: {MARKET_DATA['volatility']:.2%}")
-except Exception as e:
-    print("WARNING: Could not connect to live market. Using static historical baseline.")
+except Exception:
+    pass
 
 def run_simulation(
     current_age: int = 30,
@@ -81,10 +78,26 @@ def run_simulation(
 
     recommendations = []
     if gap < 0:
-        recommendations.append({"action": "Delay Retirement", "detail": "Delay retirement by 3-5 years to allow investments to compound."})
-        recommendations.append({"action": "Boost Savings", "detail": "Increase annual contributions to rebuild portfolio reserves."})
+        recommendations.append({"action": "Delay Retirement", "detail": "Delay retirement by 3-5 years."})
+        recommendations.append({"action": "Boost Savings", "detail": "Increase annual contributions."})
     else:
-        recommendations.append({"action": "Plan Optimized", "detail": f"Surplus achieved using live market data (Vol: {market_volatility:.1%})."})
+        recommendations.append({"action": "Plan Optimized", "detail": f"Surplus achieved (Live Vol: {market_volatility:.1%})."})
+
+    # --- ENGINE 2: ASSET ALLOCATION GLIDEPATH ---
+    # Rule of 110: Equity % = 110 - age. Bonds make up the rest. Cash is a 5% buffer.
+    equity_pct = max(20, min(90, 110 - current_age))
+    cash_pct = 5
+    bonds_pct = 100 - equity_pct - cash_pct
+    
+    # Adjust for shocks (if inflation is high, shift 10% from bonds to equities/alternatives)
+    if inflation_shock and bonds_pct > 10:
+        bonds_pct -= 10
+        equity_pct += 10
+
+    allocation = {
+        "labels": ["Equities (S&P 500)", "Fixed Income (Bonds)", "Cash/Reserves"],
+        "data": [equity_pct, bonds_pct, cash_pct]
+    }
 
     return {
         "ages": ages,
@@ -95,5 +108,6 @@ def run_simulation(
         "gap": round(gap, 2),
         "status": "Surplus" if gap >= 0 else "Shortfall",
         "success_rate": round(success_rate, 1),
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "allocation": allocation
     }

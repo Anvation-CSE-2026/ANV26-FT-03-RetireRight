@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -10,14 +11,14 @@ from backend.engine import run_simulation
 app = FastAPI(title="RetireRight AI")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# --- REAL LLM INTEGRATION (Modern SDK) ---
+# --- REAL LLM INTEGRATION ---
 GEMINI_API_KEY = "AQ.Ab8RN6LDimElRaS7KW4Waeicm7z_skxgI7d8nnZu_Zej9329IQ"
 
 client = None
 try:
     if GEMINI_API_KEY:
         client = genai.Client(api_key=GEMINI_API_KEY)
-        print("\n✅ SUCCESS: Connected to Gemini using the new google-genai SDK!\n")
+        print("\n✅ SUCCESS: Connected to Gemini!\n")
 except Exception as e:
     print(f"\n❌ FAILED to initialize Gemini Client: {e}\n")
 
@@ -39,6 +40,31 @@ class ChatQuery(BaseModel):
     message: str
     current_state: PlanRequest
 
+def calculate_exact_savings(state: dict, target_gap: float = 0.0):
+    """
+    Backend Quantitative Engine: Finds exact contribution required for ANY surplus target.
+    Now allows LOWERING savings if the user is over-funded.
+    """
+    low = 1000.0  # Minimum slider value
+    high = max(state["annual_contribution"], 0.0) + 300000.0 
+    best_contrib = high
+    
+    for _ in range(20): # 20 iterations for high precision
+        mid = (low + high) / 2.0
+        test_state = state.copy()
+        test_state["annual_contribution"] = mid
+        
+        sim_result = run_simulation(**test_state)
+        
+        if sim_result["gap"] >= target_gap:
+            best_contrib = mid
+            high = mid
+        else:
+            low = mid
+
+    # Ensure it doesn't drop below the UI slider's minimum of 1000
+    return max(1000.0, round(best_contrib / 100) * 100)
+
 @app.get("/")
 def serve_index():
     return FileResponse("static/index.html")
@@ -49,100 +75,93 @@ def simulate_plan(payload: PlanRequest):
 
 @app.post("/api/chat")
 def handle_chat(query: ChatQuery):
-    msg = query.message.lower()
+    msg = query.message
     state = query.current_state.model_dump()
     
     reply = ""
     override = {}
+    engine_directive = {"action": "NONE", "target_value": 0.0}
     
-    # 1. ATTEMPT REAL AI NLP PARSING
+    # 1. ATTEMPT PURE AI INTENT ROUTING
     if client:
         prompt = f"""
-        You are an autonomous FinTech retirement planning copilot with direct access to the user's simulation controls.
-        Current Financial State:
-        {json.dumps(state)}
+        You are the AI brain of a FinTech operating system. Translate natural language into system updates.
+        Current State: {json.dumps(state)}
+        User Input: "{msg}"
         
-        User input: "{msg}"
+        RULES:
+        1. SLIDERS: If they say "age 40" or "savings 50k", map it to "ui_updates".
+        2. TARGET CORPUS: If they say "Target Corpus 1000000", calculate 1000000 / 25 and set "annual_spend" to that number.
+        3. SURPLUS/SHORTFALL: If they say "make my surplus 200000" or "fix shortfall", DO NOT update sliders. Set "engine_directive" action to "GOAL_SEEK" and "target_value" to the number (or 0 for shortfall).
         
-        TASK:
-        If the user asks to fix the shortfall, recover, improve their score, or adjust to life shocks:
-        1. Formulate a realistic adjustment strategy to eliminate the shortfall and return the plan to Surplus (A+ Grade).
-        2. Set DIRECT absolute values in "state_override" for:
-           - "retire_age": delayed retirement age (typically +2 to +6 years beyond current retire_age, between 60 and 68).
-           - "annual_contribution": increased annual savings amount (e.g., raise by $3,000 to $8,000 to overcome inflation or shocks).
-        3. If the user asks to toggle life shocks, set "inflation_shock", "medical_shock", or "career_shock" to true or false.
-
-        Respond STRICTLY with a raw JSON object (NO MARKDOWN backticks):
+        Return ONLY valid JSON:
         {{
-            "reply": "Clear, concise 2-sentence explanation telling the user the exact slider adjustments applied.",
-            "state_override": {{
-                "retire_age": <integer or omit if unchanged>,
-                "annual_contribution": <number or omit if unchanged>,
-                "inflation_shock": <bool or omit if unchanged>,
-                "medical_shock": <bool or omit if unchanged>,
-                "career_shock": <bool or omit if unchanged>
-            }}
+            "reply": "Conversational response.",
+            "ui_updates": {{ "current_age": 40 }},
+            "engine_directive": {{ "action": "GOAL_SEEK", "target_value": 200000 }}
         }}
         """
         
-        models_to_test = [
-            'gemini-1.5-pro',
-            'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-pro',
-            'gemini-3.5-flash'
-        ]
+        models_to_test = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
         
         for model_name in models_to_test:
             try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt
-                )
+                response = client.models.generate_content(model=model_name, contents=prompt)
                 raw_text = response.text.strip()
-                if raw_text.startswith("```json"): raw_text = raw_text[7:]
-                if raw_text.startswith("```"): raw_text = raw_text[3:]
-                if raw_text.endswith("```"): raw_text = raw_text[:-3]
-                raw_text = raw_text.strip()
                 
-                ai_result = json.loads(raw_text)
-                reply = ai_result.get("reply", "")
-                override = ai_result.get("state_override", {})
-                break
-            except Exception:
+                json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                if json_match:
+                    ai_result = json.loads(json_match.group(0))
+                    reply = ai_result.get("reply", "")
+                    override = ai_result.get("ui_updates", {})
+                    engine_directive = ai_result.get("engine_directive", {"action": "NONE", "target_value": 0.0})
+                    break
+            except Exception as e:
+                print(f"AI Router Failed: {e}")
                 continue
 
-    # 2. GUARANTEED SHORTFALL SOLVER (Fail-Safe if LLM is offline or omitted keys)
-    is_fix_intent = any(keyword in msg for keyword in ["fix", "shortfall", "solve", "recover", "help", "repair", "balance"])
-    
-    if is_fix_intent:
-        target_retire = max(state["retire_age"] + 4, 62)
-        target_contrib = state["annual_contribution"] + 5000.0
-        
-        if "retire_age" not in override:
-            override["retire_age"] = int(target_retire)
-        if "annual_contribution" not in override:
-            override["annual_contribution"] = float(target_contrib)
-            
-        if not reply:
-            reply = f"I have adjusted your plan to absorb the shortfall: shifted retirement to age {override['retire_age']} and increased annual savings to ${int(override['annual_contribution']):,}. Watch your sliders update to the target trajectory."
-
-    elif "inflation" in msg and "inflation_shock" not in override:
-        override["inflation_shock"] = not state["inflation_shock"]
-        mode = "applied" if override["inflation_shock"] else "cleared"
-        reply = f"Inflation shock (+4% persistent cost inflation) has been {mode}."
-
-    elif "medical" in msg and "medical_shock" not in override:
-        override["medical_shock"] = not state["medical_shock"]
-        mode = "triggered" if override["medical_shock"] else "cleared"
-        reply = f"Unforeseen medical event ($45,000 expense at age 48) has been {mode}."
-
-    elif "career" in msg and "career_shock" not in override:
-        override["career_shock"] = not state["career_shock"]
-        mode = "triggered" if override["career_shock"] else "cleared"
-        reply = f"Income freeze scenario (2 years at age 40) has been {mode}."
-
+    # 2. INVISIBLE EMERGENCY FALLBACK
     if not reply:
-        reply = "I'm tracking your portfolio risks. You can ask to 'Fix the shortfall', 'Simulate inflation shock', or test life events."
+        msg_clean = msg.lower().replace(",", "").replace("$", "")
+        if "surplus" in msg_clean:
+            match = re.search(r'\d+', msg_clean)
+            val = float(match.group()) if match else 0.0
+            engine_directive = {"action": "GOAL_SEEK", "target_value": val}
+        elif "fix" in msg_clean or "shortfall" in msg_clean:
+            engine_directive = {"action": "GOAL_SEEK", "target_value": 0.0}
+        else:
+            reply = "System online. Ready to accept parameter changes or execute quantitative shortfall recovery."
+
+    # 3. BACKEND EXECUTION OF DIRECTIVES (With logical safety checks)
+    if engine_directive.get("action") == "GOAL_SEEK":
+        target_gap = float(engine_directive.get("target_value", 0.0))
+        
+        # SAFETY CHECK: Run the current state first
+        current_sim = run_simulation(**state)
+        current_gap = current_sim["gap"]
+        
+        # If fixing a shortfall, but we already have a surplus -> Do nothing
+        if target_gap == 0.0 and current_gap >= 0:
+            reply = "Your mathematical baseline is already secure. No shortfall detected."
+        # If targeting a specific surplus, but we are already close or over it -> Let the user know
+        elif target_gap > 0.0 and abs(current_gap - target_gap) < 5000:
+            reply = f"Your current surplus already meets your target of ${int(target_gap):,}. No adjustments needed."
+        else:
+            # We actually need to fix a math gap
+            search_state = state.copy()
+            
+            # Only bump retirement age if they are in an actual shortfall
+            if target_gap == 0.0 and state.get("retire_age", 60) < 65:
+                search_state["retire_age"] = max(state.get("retire_age", 60) + 3, min(state.get("retire_age", 60) + 5, 65))
+                override["retire_age"] = search_state["retire_age"]
+                
+            exact_contribution_needed = calculate_exact_savings(search_state, target_gap=target_gap)
+            override["annual_contribution"] = exact_contribution_needed
+            
+            if target_gap == 0.0:
+                reply = f"Quantitative engine executed. To mathematically eliminate your shortfall, retirement shifted to {search_state['retire_age']} and annual savings optimized to ${int(exact_contribution_needed):,}."
+            else:
+                verb = "reduced" if exact_contribution_needed < state["annual_contribution"] else "optimized"
+                reply = f"Quantitative engine executed. To hit exactly a ${int(target_gap):,} surplus, annual savings {verb} to ${int(exact_contribution_needed):,}."
 
     return {"reply": reply, "state_override": override}
