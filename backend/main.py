@@ -1,4 +1,3 @@
-import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -14,9 +13,9 @@ class PlanRequest(BaseModel):
     current_age: int = 30
     retire_age: int = 60
     current_savings: float = 50000.0
-    annual_contribution: float = 10000.0
-    annual_spend: float = 40000.0
-    baseline_inflation: float = 0.04
+    annual_contribution: float = 15000.0
+    annual_spend: float = 30000.0
+    baseline_inflation: float = 0.025
     inflation_shock: bool = False
     medical_shock: bool = False
     career_shock: bool = False
