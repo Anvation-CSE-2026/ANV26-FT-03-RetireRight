@@ -75,6 +75,13 @@ def run_simulation(
     target_corpus = (annual_spend * ((1.0 + eff_inflation) ** retire_index)) * 25.0
     gap = median_corpus_at_retire - target_corpus
     success_rate = float(np.sum(trajectories[:, -1] > 0) / num_simulations * 100.0)
+    
+    # Calculate exact age of depletion for the Diagnostic Report
+    depletion_age = "N/A"
+    for i, val in enumerate(p50):
+        if val <= 0.0 and i > 0:
+            depletion_age = ages[i]
+            break
 
     recommendations = []
     if gap < 0:
@@ -83,13 +90,10 @@ def run_simulation(
     else:
         recommendations.append({"action": "Plan Optimized", "detail": f"Surplus achieved (Live Vol: {market_volatility:.1%})."})
 
-    # --- ENGINE 2: ASSET ALLOCATION GLIDEPATH ---
-    # Rule of 110: Equity % = 110 - age. Bonds make up the rest. Cash is a 5% buffer.
     equity_pct = max(20, min(90, 110 - current_age))
     cash_pct = 5
     bonds_pct = 100 - equity_pct - cash_pct
     
-    # Adjust for shocks (if inflation is high, shift 10% from bonds to equities/alternatives)
     if inflation_shock and bonds_pct > 10:
         bonds_pct -= 10
         equity_pct += 10
@@ -108,6 +112,7 @@ def run_simulation(
         "gap": round(gap, 2),
         "status": "Surplus" if gap >= 0 else "Shortfall",
         "success_rate": round(success_rate, 1),
+        "depletion_age": depletion_age,
         "recommendations": recommendations,
         "allocation": allocation
     }
