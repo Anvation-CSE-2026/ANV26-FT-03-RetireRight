@@ -17,7 +17,6 @@ try:
     print("Fetching live S&P 500 market data (2-second timeout limit)...")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(fetch_market_data)
-        # Abort if the hackathon Wi-Fi takes longer than 2 seconds
         live_ret, live_vol = future.result(timeout=2.0) 
         
     MARKET_DATA["mean_return"] = max(0.05, min(live_ret, 0.15))
@@ -38,7 +37,7 @@ def run_simulation(
     annual_spend: float = 30000.0,
     baseline_inflation: float = 0.025,
     inflation_shock: bool = False,
-    medical_shock: bool = False,
+    medical_cost: float = 0.0,  # <-- CONVERTED TO FLOAT
     career_shock: bool = False,
     extra_work_years: int = 0,
     extra_annual_savings: float = 0.0,
@@ -73,8 +72,9 @@ def run_simulation(
             yearly_outflow = annual_spend * cost_multiplier
             trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t] * (1.0 + market_returns) - yearly_outflow)
             
-        if medical_shock and age_now == 48:
-            trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t + 1] - 45000.0)
+        # <-- SLIDER LOGIC APPLIED HERE
+        if medical_cost > 0 and age_now == 48:
+            trajectories[:, t + 1] = np.maximum(0.0, trajectories[:, t + 1] - medical_cost)
 
     p10 = np.percentile(trajectories, 10, axis=0).tolist()
     p50 = np.percentile(trajectories, 50, axis=0).tolist()

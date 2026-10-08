@@ -29,7 +29,7 @@ class PlanRequest(BaseModel):
     annual_spend: float = 30000.0
     baseline_inflation: float = 0.025
     inflation_shock: bool = False
-    medical_shock: bool = False
+    medical_cost: float = 0.0  # <-- CONVERTED TO FLOAT
     career_shock: bool = False
     extra_work_years: int = 0
     extra_annual_savings: float = 0.0

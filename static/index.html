@@ -30,6 +30,7 @@
     .neon-text { text-shadow: 0 0 15px rgba(16, 185, 129, 0.6); }
     .neon-text-red { text-shadow: 0 0 15px rgba(244, 63, 94, 0.6); }
     
+    /* DEFAULT GREEN SLIDER */
     input[type=range] {
       -webkit-appearance: none; background: rgba(255, 255, 255, 0.1); border-radius: 8px; height: 4px; outline: none;
     }
@@ -38,6 +39,12 @@
       background: #10b981; cursor: pointer; box-shadow: 0 0 12px rgba(16, 185, 129, 0.8); transition: transform 0.1s;
     }
     input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+    /* CUSTOM RED SLIDER FOR MEDICAL EVENT */
+    input[type=range].slider-rose::-webkit-slider-thumb {
+      background: #f43f5e;
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.8);
+    }
     
     .ai-pulse { animation: pulse-border 1.2s ease-in-out; }
     @keyframes pulse-border {
@@ -86,7 +93,6 @@
     </div>
     
     <div class="flex items-center space-x-3">
-      <!-- One-Click Export Button -->
       <button onclick="window.print()" class="items-center px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition flex">
         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
         Export Plan
@@ -102,12 +108,10 @@
     </div>
   </header>
 
-  <!-- AI FLOATING ACTION BUTTON -->
   <button onclick="toggleAIModal(true)" class="fixed bottom-10 right-10 z-30 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full p-4 shadow-[0_0_30px_rgba(79,70,229,0.8)] flex items-center justify-center transition hover:scale-110">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
   </button>
 
-  <!-- ULTRA-MODERN AI CHAT MODAL -->
   <div id="ai_modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xl transition-opacity p-4">
     <div class="bg-[#0b1120]/95 backdrop-blur-3xl w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col h-[80vh] shadow-[0_20px_70px_-10px_rgba(79,70,229,0.3)] border border-white/10 ring-1 ring-white/5">
       <div class="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
@@ -145,7 +149,6 @@
     </div>
   </div>
 
-  <!-- DIAGNOSTIC REPORT MODAL -->
   <div id="remedy_modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/85 backdrop-blur-xl transition-opacity p-4">
     <div class="bg-slate-900 border border-rose-500/40 w-full max-w-5xl rounded-3xl shadow-[0_0_50px_rgba(244,63,94,0.2)] flex flex-col overflow-hidden max-h-[90vh]">
       <div class="p-6 border-b border-white/5 bg-rose-500/5 flex justify-between items-center">
@@ -246,7 +249,6 @@
           </div>
           <div>
             <label class="text-xs text-slate-300 flex justify-between mb-2">Target Lifestyle Spend <span class="text-emerald-400 font-bold" id="val_spend">30,000</span></label>
-            <!-- DIVIDE-BY-ZERO SAFETY: Minimum lifestyle spend is now $1,000 -->
             <input id="in_spend" type="range" min="1000" max="250000" step="100" value="30000" class="w-full">
           </div>
         </div>
@@ -257,19 +259,28 @@
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> 
           Market Shocks
         </h2>
-        <div class="space-y-3">
+        <div class="space-y-4">
+          
           <button id="btn_inflation" class="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 text-left flex justify-between items-center transition group">
             <span class="group-hover:text-rose-400 transition">Hyper-Inflation (+4%)</span>
             <span id="badge_inflation" class="px-2 py-1 rounded-md text-[10px] bg-slate-800 text-slate-400">OFF</span>
           </button>
-          <button id="btn_medical" class="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 text-left flex justify-between items-center transition group">
-            <span class="group-hover:text-rose-400 transition">Medical Event ($45k)</span>
-            <span id="badge_medical" class="px-2 py-1 rounded-md text-[10px] bg-slate-800 text-slate-400">OFF</span>
-          </button>
+          
+          <!-- NEW MEDICAL SLIDER -->
+          <div class="bg-white/5 border border-white/10 p-4 rounded-xl">
+            <label class="text-xs text-slate-300 flex justify-between mb-3">
+              <span class="font-semibold text-rose-300">Medical Event (Age 48)</span>
+              <span class="text-rose-400 font-bold">$<span id="val_medical">0</span></span>
+            </label>
+            <input id="in_medical" type="range" min="0" max="200000" step="5000" value="0" class="w-full slider-rose">
+          </div>
+
+          <!-- FIXED CAREER BUTTON -->
           <button id="btn_career" class="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 hover:bg-white/10 text-left flex justify-between items-center transition group">
             <span class="group-hover:text-rose-400 transition">Career Freeze (2 Yrs)</span>
             <span id="badge_career" class="px-2 py-1 rounded-md text-[10px] bg-slate-800 text-slate-400">OFF</span>
           </button>
+          
         </div>
       </div>
     </section>
@@ -362,7 +373,7 @@
     const state = {
       current_age: 30, retire_age: 60, current_savings: 50000,
       annual_contribution: 15000, annual_spend: 30000, baseline_inflation: 0.025,
-      inflation_shock: false, medical_shock: false, career_shock: false,
+      inflation_shock: false, medical_cost: 0.0, career_shock: false,
       extra_work_years: 0, extra_annual_savings: 0.0
     };
 
@@ -471,6 +482,10 @@
       document.getElementById('val_contrib').textContent = state.annual_contribution.toLocaleString();
       document.getElementById('in_spend').value = state.annual_spend;
       document.getElementById('val_spend').textContent = state.annual_spend.toLocaleString();
+      
+      // Update Medical Slider UI
+      document.getElementById('in_medical').value = state.medical_cost;
+      document.getElementById('val_medical').textContent = state.medical_cost.toLocaleString();
 
       const updateBadge = (id, val) => {
         const badge = document.getElementById(id);
@@ -478,12 +493,10 @@
         badge.className = val ? 'px-2 py-1 rounded-md text-[10px] bg-rose-500 text-white font-bold drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'px-2 py-1 rounded-md text-[10px] bg-slate-800 text-slate-400';
       };
       updateBadge('badge_inflation', state.inflation_shock);
-      updateBadge('badge_medical', state.medical_shock);
       updateBadge('badge_career', state.career_shock);
     }
 
     async function triggerSimulation() {
-      // Save State on every trigger
       localStorage.setItem('retireRightState', JSON.stringify(state));
       
       const res = await fetch('/api/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
@@ -501,7 +514,7 @@
         state.annual_contribution = 0;
         state.annual_spend = 150000;
         state.inflation_shock = true;
-        state.medical_shock = true;
+        state.medical_cost = 45000;
         state.career_shock = true;
         
         syncUIWithState();
@@ -641,11 +654,14 @@
         triggerSimulation();
       });
     };
+    
+    // Bind all sliders including the new medical cost
     bindSlider('in_age', 'current_age', 'val_age');
     bindSlider('in_retire', 'retire_age', 'val_retire');
     bindSlider('in_savings', 'current_savings', 'val_savings');
     bindSlider('in_contrib', 'annual_contribution', 'val_contrib');
     bindSlider('in_spend', 'annual_spend', 'val_spend');
+    bindSlider('in_medical', 'medical_cost', 'val_medical');
 
     const toggleShock = (btnId, badgeId, key) => {
       document.getElementById(btnId).addEventListener('click', () => {
@@ -656,9 +672,10 @@
         triggerSimulation();
       });
     };
+    
     toggleShock('btn_inflation', 'badge_inflation', 'inflation_shock');
-    toggleShock('btn_medical', 'badge_medical', 'medical_shock');
-    toggleShock('btn_career', 'career_shock');
+    // FIXED CAREER SHOCK BUTTON PARAMETERS
+    toggleShock('btn_career', 'badge_career', 'career_shock');
 
     function animateSlider(id, labelId, targetVal) {
       const input = document.getElementById(id);
@@ -715,6 +732,12 @@
           if (data.state_override.current_savings !== undefined) animateSlider('in_savings', 'val_savings', state.current_savings);
           if (data.state_override.annual_contribution !== undefined) animateSlider('in_contrib', 'val_contrib', state.annual_contribution);
           if (data.state_override.annual_spend !== undefined) animateSlider('in_spend', 'val_spend', state.annual_spend);
+          
+          if (data.state_override.medical_cost !== undefined) {
+            document.getElementById('in_medical').value = state.medical_cost;
+            document.getElementById('val_medical').textContent = state.medical_cost.toLocaleString();
+          }
+
           triggerSimulation();
         }
 
