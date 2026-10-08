@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RetireRight AI - Life Path Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg border border-emerald-500/40">R</div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight">RetireRight AI</h1>
+        <p class="text-xs text-slate-400">Monte Carlo Life Path Planner & Stress Engine</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+        Live Simulation Engine Active
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Body Grid -->
+  <main class="flex-1 grid grid-cols-12 gap-6 p-6">
+    
+    <!-- Left Column: Controls & Shocks (3 Cols) -->
+    <section class="col-span-12 lg:col-span-3 space-y-6">
+      
+      <!-- Baseline Assumptions -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">Financial Baseline</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-slate-400 flex justify-between">Current Age <span id="val_age">30</span></label>
+            <input id="in_age" type="range" min="20" max="50" value="30" class="w-full accent-emerald-500">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 flex justify-between">Target Retirement Age <span id="val_retire">60</span></label>
+            <input id="in_retire" type="range" min="50" max="75" value="60" class="w-full accent-emerald-500">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 flex justify-between">Current Savings ($) <span id="val_savings">50,000</span></label>
+            <input id="in_savings" type="range" min="5000" max="250000" step="5000" value="50000" class="w-full accent-emerald-500">
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 flex justify-between">Annual Contribution ($) <span id="val_contrib">10,000</span></label>
+            <input id="in_contrib" type="range" min="2000" max="50000" step="1000" value="10000" class="w-full accent-emerald-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Stress Testing & Shocks -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-rose-400 mb-4">Life Shocks & Events</h2>
+        
+        <div class="space-y-3">
+          <button id="btn_inflation" class="w-full py-2.5 px-3 rounded-lg text-xs font-semibold border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-left flex justify-between items-center transition">
+            <span>Inflation Shock (+4%)</span>
+            <span id="badge_inflation" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">OFF</span>
+          </button>
+          <button id="btn_medical" class="w-full py-2.5 px-3 rounded-lg text-xs font-semibold border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-left flex justify-between items-center transition">
+            <span>Medical Crisis ($45k at 48)</span>
+            <span id="badge_medical" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">OFF</span>
+          </button>
+          <button id="btn_career" class="w-full py-2.5 px-3 rounded-lg text-xs font-semibold border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-left flex justify-between items-center transition">
+            <span>Income Freeze (2 Yrs at 40)</span>
+            <span id="badge_career" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">OFF</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Center Column: Visualization & Metrics (6 Cols) -->
+    <section class="col-span-12 lg:col-span-6 space-y-6">
+      
+      <!-- Key Metric Cards -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs text-slate-400">Goal Health</p>
+          <p id="out_status" class="text-lg font-bold mt-1 text-emerald-400">Surplus</p>
+          <p id="out_gap" class="text-xs text-slate-500 mt-0.5">+$0</p>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs text-slate-400">Target Corpus</p>
+          <p id="out_target" class="text-lg font-bold mt-1 text-slate-200">$0</p>
+          <p class="text-xs text-slate-500 mt-0.5">At retirement</p>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <p class="text-xs text-slate-400">Solvency Likelihood</p>
+          <p id="out_success" class="text-lg font-bold mt-1 text-emerald-400">0%</p>
+          <p class="text-xs text-slate-500 mt-0.5">Monte Carlo 200 runs</p>
+        </div>
+      </div>
+
+      <!-- Chart Display -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wide text-slate-200">Portfolio Trajectory & Confidence Bands</h2>
+            <p class="text-xs text-slate-400">10th, 50th (Median), and 90th percentile wealth projections</p>
+          </div>
+        </div>
+        <div class="h-[360px]">
+          <canvas id="planChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Actionable Options -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <h3 class="text-xs font-semibold uppercase text-slate-400 mb-2">Automated Adjustment Options</h3>
+        <div id="recs_container" class="flex flex-wrap gap-2 text-xs">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Conversational AI (3 Cols) -->
+    <section class="col-span-12 lg:col-span-3 flex flex-col bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-lg h-[680px]">
+      <div class="p-4 border-b border-slate-800 bg-slate-900 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-200">RetireRight Copilot</h2>
+          <p class="text-[11px] text-emerald-400">Scenario Planning Agent</p>
+        </div>
+      </div>
+
+      <!-- Message History -->
+      <div id="chat_history" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700/50 text-slate-300">
+          Hello! I am monitoring your retirement plan against market and life risks. Ask me to simulate shocks or formulate a plan to close shortfalls.
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="p-2 border-t border-slate-800 flex flex-wrap gap-1 bg-slate-950/40">
+        <button onclick="sendQuickPrompt('Simulate inflation shock')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">
+          + Inflation Shock
+        </button>
+        <button onclick="sendQuickPrompt('Simulate medical event')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded">
+          + Medical Event
+        </button>
+        <button onclick="sendQuickPrompt('How do I fix this shortfall?')" class="text-[10px] bg-emerald-950/60 border border-emerald-600/40 text-emerald-300 px-2 py-1 rounded">
+          Fix Shortfall
+        </button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900 flex space-x-2">
+        <input id="chat_input" type="text" placeholder="Type a scenario or query..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+        <button id="chat_submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-2 rounded-lg text-xs transition">
+          Send
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State
+    const state = {
+      current_age: 30,
+      retire_age: 60,
+      current_savings: 50000,
+      annual_contribution: 10000,
+      annual_spend: 40000,
+      baseline_inflation: 0.04,
+      inflation_shock: false,
+      medical_shock: false,
+      career_shock: false,
+      extra_work_years: 0,
+      extra_annual_savings: 0.0
+    };
+
+    // Chart Setup
+    let chartInstance = null;
+    const ctx = document.getElementById('planChart').getContext('2d');
+
+    function initChart() {
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Optimistic (90th%)',
+              data: [],
+              borderColor: 'rgba(52, 211, 153, 0.4)',
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: 'Median Path (50th%)',
+              data: [],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              borderWidth: 3,
+              pointRadius: 0,
+              fill: true
+            },
+            {
+              label: 'Pessimistic (10th%)',
+              data: [],
+              borderColor: 'rgba(244, 63, 94, 0.5)',
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Age', color: '#94a3b8' },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: { color: '#94a3b8' }
+            },
+            y: {
+              title: { display: true, text: 'Portfolio Value ($)', color: '#94a3b8' },
+              grid: { color: 'rgba(51, 65, 85, 0.3)' },
+              ticks: {
+                color: '#94a3b8',
+                callback: (val) => '$' + (val / 1000).toLocaleString() + 'k'
+              }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#cbd5e1' } }
+          }
+        }
+      });
+    }
+
+    async function triggerSimulation() {
+      const res = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+      const data = await res.json();
+      updateDashboard(data);
+    }
+
+    function updateDashboard(data) {
+      // Metrics
+      const isSurplus = data.status === 'Surplus';
+      const statusEl = document.getElementById('out_status');
+      const gapEl = document.getElementById('out_gap');
+      
+      statusEl.textContent = data.status;
+      statusEl.className = isSurplus ? 'text-lg font-bold mt-1 text-emerald-400' : 'text-lg font-bold mt-1 text-rose-500';
+      
+      gapEl.textContent = (isSurplus ? '+' : '') + '$' + Math.abs(data.gap).toLocaleString();
+      document.getElementById('out_target').textContent = '$' + Math.round(data.target_corpus).toLocaleString();
+      
+      const successEl = document.getElementById('out_success');
+      successEl.textContent = data.success_rate + '%';
+      successEl.className = data.success_rate > 70 ? 'text-lg font-bold mt-1 text-emerald-400' : 'text-lg font-bold mt-1 text-rose-500';
+
+      // Recommendations
+      const recsBox = document.getElementById('recs_container');
+      recsBox.innerHTML = '';
+      data.recommendations.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = 'bg-slate-800 border border-slate-700 rounded px-2.5 py-1 text-slate-300';
+        item.innerHTML = `<span class="font-semibold text-emerald-400">${rec.action}:</span> ${rec.detail}`;
+        recsBox.appendChild(item);
+      });
+
+      // Chart
+      chartInstance.data.labels = data.ages;
+      chartInstance.data.datasets[0].data = data.p90_optimistic;
+      chartInstance.data.datasets[1].data = data.p50_median;
+      chartInstance.data.datasets[2].data = data.p10_pessimistic;
+      
+      if (!isSurplus) {
+        chartInstance.data.datasets[1].borderColor = '#f43f5e';
+        chartInstance.data.datasets[1].backgroundColor = 'rgba(244, 63, 94, 0.12)';
+      } else {
+        chartInstance.data.datasets[1].borderColor = '#10b981';
+        chartInstance.data.datasets[1].backgroundColor = 'rgba(16, 185, 129, 0.12)';
+      }
+      chartInstance.update();
+    }
+
+    // Input slider event listeners
+    const bindSlider = (id, key, labelId) => {
+      document.getElementById(id).addEventListener('input', (e) => {
+        state[key] = parseFloat(e.target.value);
+        document.getElementById(labelId).textContent = state[key].toLocaleString();
+        triggerSimulation();
+      });
+    };
+    bindSlider('in_age', 'current_age', 'val_age');
+    bindSlider('in_retire', 'retire_age', 'val_retire');
+    bindSlider('in_savings', 'current_savings', 'val_savings');
+    bindSlider('in_contrib', 'annual_contribution', 'val_contrib');
+
+    // Shock Button Toggles
+    const toggleShock = (btnId, badgeId, key) => {
+      document.getElementById(btnId).addEventListener('click', () => {
+        state[key] = !state[key];
+        const badge = document.getElementById(badgeId);
+        badge.textContent = state[key] ? 'ACTIVE' : 'OFF';
+        badge.className = state[key] ? 'px-2 py-0.5 rounded text-[10px] bg-rose-500 text-white font-bold' : 'px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400';
+        triggerSimulation();
+      });
+    };
+    toggleShock('btn_inflation', 'badge_inflation', 'inflation_shock');
+    toggleShock('btn_medical', 'badge_medical', 'medical_shock');
+    toggleShock('btn_career', 'badge_career', 'career_shock');
+
+    // Chat handling
+    async function sendMessage(text) {
+      if (!text.trim()) return;
+      const history = document.getElementById('chat_history');
+      
+      // User message bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'bg-emerald-600 text-white p-2.5 rounded-lg ml-6 text-right';
+      userBubble.textContent = text;
+      history.appendChild(userBubble);
+      history.scrollTop = history.scrollHeight;
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, current_state: state })
+      });
+      const data = await res.json();
+
+      // Apply overrides if returned
+      if (data.state_override) {
+        Object.assign(state, data.state_override);
+        // Sync badge UI states
+        document.getElementById('badge_inflation').textContent = state.inflation_shock ? 'ACTIVE' : 'OFF';
+        document.getElementById('badge_medical').textContent = state.medical_shock ? 'ACTIVE' : 'OFF';
+        document.getElementById('badge_career').textContent = state.career_shock ? 'ACTIVE' : 'OFF';
+        triggerSimulation();
+      }
+
+      // Bot reply bubble
+      const botBubble = document.createElement('div');
+      botBubble.className = 'bg-slate-800/90 border border-slate-700/50 p-2.5 rounded-lg mr-6 text-slate-200';
+      botBubble.textContent = data.reply;
+      history.appendChild(botBubble);
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function sendQuickPrompt(prompt) {
+      document.getElementById('chat_input').value = prompt;
+      sendMessage(prompt);
+      document.getElementById('chat_input').value = '';
+    }
+
+    document.getElementById('chat_submit').addEventListener('click', () => {
+      const input = document.getElementById('chat_input');
+      sendMessage(input.value);
+      input.value = '';
+    });
+
+    document.getElementById('chat_input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage(e.target.value);
+        e.target.value = '';
+      }
+    });
+
+    // Start
+    initChart();
+    triggerSimulation();
+  </script>
+</body>
+</html>
