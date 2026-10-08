@@ -1,23 +1,33 @@
 import numpy as np
 import yfinance as yf
+import concurrent.futures
 
 # Global cache for live market data
 MARKET_DATA = {"mean_return": 0.08, "volatility": 0.12, "is_live": False}
 
-try:
-    print("Fetching live S&P 500 market data...")
+def fetch_market_data():
     sp500 = yf.Ticker("^GSPC")
     hist = sp500.history(period="1y")
     daily_returns = hist['Close'].pct_change().dropna()
-    
     live_vol = float(daily_returns.std() * np.sqrt(252))
     live_ret = float(daily_returns.mean() * 252)
-    
+    return live_ret, live_vol
+
+try:
+    print("Fetching live S&P 500 market data (2-second timeout limit)...")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(fetch_market_data)
+        # Abort if the hackathon Wi-Fi takes longer than 2 seconds
+        live_ret, live_vol = future.result(timeout=2.0) 
+        
     MARKET_DATA["mean_return"] = max(0.05, min(live_ret, 0.15))
     MARKET_DATA["volatility"] = max(0.08, min(live_vol, 0.25))
     MARKET_DATA["is_live"] = True
-except Exception:
-    pass
+    print("✅ Live market data successfully loaded.")
+except concurrent.futures.TimeoutError:
+    print("⚠️ yfinance API timeout! Booting instantly with historical fallback.")
+except Exception as e:
+    print(f"⚠️ Market fetch failed: {e}. Using fallback baseline.")
 
 def run_simulation(
     current_age: int = 30,
@@ -76,7 +86,6 @@ def run_simulation(
     gap = median_corpus_at_retire - target_corpus
     success_rate = float(np.sum(trajectories[:, -1] > 0) / num_simulations * 100.0)
     
-    # Calculate exact age of depletion for the Diagnostic Report
     depletion_age = "N/A"
     for i, val in enumerate(p50):
         if val <= 0.0 and i > 0:

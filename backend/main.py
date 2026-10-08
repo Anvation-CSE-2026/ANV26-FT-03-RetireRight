@@ -12,9 +12,7 @@ from backend.engine import run_simulation
 app = FastAPI(title="RetireRight AI")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# --- REAL LLM INTEGRATION ---
 GEMINI_API_KEY = "AQ.Ab8RN6LDimElRaS7KW4Waeicm7z_skxgI7d8nnZu_Zej9329IQ"
-
 client = None
 try:
     if GEMINI_API_KEY:
@@ -41,7 +39,6 @@ class ChatQuery(BaseModel):
     current_state: PlanRequest
 
 def calculate_exact_savings(state: dict, target_gap: float = 0.0):
-    # Math Safety: If years to save is 0, saving does nothing. Return current value.
     if state["current_age"] >= state["retire_age"]:
         return state["annual_contribution"]
         
@@ -50,7 +47,7 @@ def calculate_exact_savings(state: dict, target_gap: float = 0.0):
     best_contrib = high
     safe_target = target_gap + 2500.0 
     
-    for _ in range(30): # High precision iteration
+    for _ in range(30): 
         mid = (low + high) / 2.0
         test_state = state.copy()
         test_state["annual_contribution"] = mid
@@ -137,31 +134,20 @@ def handle_chat(query: ChatQuery):
         else:
             search_state = state.copy()
             
-            # --- THE ZERO-YEAR PARADOX SOLVER ---
             if target_gap == 0.0:
-                # If they have 0 years to save, pushing savings up does nothing. We MUST push retirement back.
                 if search_state["current_age"] >= search_state["retire_age"]:
                     new_retire = search_state["current_age"] + 5
-                    if new_retire > 80:
-                        search_state["retire_age"] = 80
-                    else:
-                        search_state["retire_age"] = new_retire
+                    search_state["retire_age"] = 80 if new_retire > 80 else new_retire
                     override["retire_age"] = search_state["retire_age"]
                 else:
-                    # They have time, but math is failing. Push retirement out slightly to help.
                     search_state["retire_age"] = min(search_state["retire_age"] + 3, 80)
                     override["retire_age"] = search_state["retire_age"]
                 
             exact_contribution = calculate_exact_savings(search_state, target_gap=target_gap)
             
-            # --- THE INSOLVENCY SOLVER ---
-            # If the required savings is absurdly high (> $120k/yr) or mathematically impossible,
-            # the ONLY logical fix is to aggressively slash the Target Lifestyle Spend.
             if exact_contribution > 120000.0 or exact_contribution >= 490000.0:
-                # Drop lifestyle spend by 35% (down to a floor of $10k) to force the math to work
                 search_state["annual_spend"] = max(10000.0, search_state["annual_spend"] * 0.65)
                 override["annual_spend"] = search_state["annual_spend"]
-                # Recalculate with the cheaper lifestyle
                 exact_contribution = calculate_exact_savings(search_state, target_gap=target_gap)
                 
             override["annual_contribution"] = exact_contribution
@@ -172,12 +158,7 @@ def handle_chat(query: ChatQuery):
                 if "annual_spend" in override: actions.append(f"slashed Target Spend to ${int(override['annual_spend']):,}")
                 actions.append(f"optimized Annual Inflow to ${int(exact_contribution):,}")
                 
-                # Grammatical joining of the dynamic actions array
-                if len(actions) > 1:
-                    actions_text = ", ".join(actions[:-1]) + " and " + actions[-1]
-                else:
-                    actions_text = actions[0]
-                    
+                actions_text = ", ".join(actions[:-1]) + " and " + actions[-1] if len(actions) > 1 else actions[0]
                 reply = f"Quantitative engine executed. To mathematically guarantee a surplus, I have {actions_text}."
             else:
                 verb = "reduced" if exact_contribution < state["annual_contribution"] else "optimized"

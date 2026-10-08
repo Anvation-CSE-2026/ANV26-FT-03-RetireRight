@@ -53,7 +53,6 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* TOOLTIP STYLES */
     .tooltip-content {
       visibility: hidden;
       opacity: 0;
@@ -62,6 +61,16 @@
     .group:hover .tooltip-content {
       visibility: visible;
       opacity: 1;
+    }
+
+    /* PDF Print Rules */
+    @media print {
+      body { background: white !important; color: black !important; animation: none !important; }
+      header, section:nth-child(1), button, #ai_modal, #ai_toast, .tooltip-content { display: none !important; }
+      .glass-panel { background: white !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; color: black !important;}
+      * { color: black !important; text-shadow: none !important; }
+      canvas { max-height: 400px !important; }
+      section:nth-child(2) { grid-column: span 12 / span 12 !important; width: 100% !important;}
     }
   </style>
 </head>
@@ -77,6 +86,12 @@
     </div>
     
     <div class="flex items-center space-x-3">
+      <!-- One-Click Export Button -->
+      <button onclick="window.print()" class="items-center px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition flex">
+        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Export Plan
+      </button>
+
       <button id="btn_remedy" onclick="openRemedyModal()" class="hidden items-center px-5 py-2 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/50 hover:bg-rose-500/30 transition shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse">
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
         Generate Diagnostic Report
@@ -87,7 +102,7 @@
     </div>
   </header>
 
-  <!-- AI FLOATING ACTION BUTTON (Now a Chat Bubble) -->
+  <!-- AI FLOATING ACTION BUTTON -->
   <button onclick="toggleAIModal(true)" class="fixed bottom-10 right-10 z-30 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full p-4 shadow-[0_0_30px_rgba(79,70,229,0.8)] flex items-center justify-center transition hover:scale-110">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
   </button>
@@ -98,7 +113,6 @@
       <div class="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
         <div class="flex items-center space-x-4">
           <div class="w-10 h-10 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-inner">
-            <!-- Modern Chat Bubble Icon -->
             <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> 
           </div>
           <div>
@@ -205,7 +219,6 @@
   <!-- MAIN DASHBOARD -->
   <main class="flex-1 grid grid-cols-12 gap-6 p-6 lg:p-8 relative z-10">
     
-    <!-- Controls (Left) -->
     <section class="col-span-12 lg:col-span-3 space-y-6">
       <div id="baseline_card" class="glass-panel rounded-3xl p-6 transition-all duration-300 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
@@ -233,7 +246,8 @@
           </div>
           <div>
             <label class="text-xs text-slate-300 flex justify-between mb-2">Target Lifestyle Spend <span class="text-emerald-400 font-bold" id="val_spend">30,000</span></label>
-            <input id="in_spend" type="range" min="0" max="250000" step="100" value="30000" class="w-full">
+            <!-- DIVIDE-BY-ZERO SAFETY: Minimum lifestyle spend is now $1,000 -->
+            <input id="in_spend" type="range" min="1000" max="250000" step="100" value="30000" class="w-full">
           </div>
         </div>
       </div>
@@ -271,7 +285,6 @@
             <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Probability of Success</p>
             <div class="relative">
               <svg class="w-3.5 h-3.5 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              <!-- Tooltip: dropped downwards, z-index boosted -->
               <div class="tooltip-content absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] normal-case tracking-normal">
                 The percentage of our 200 simulated lifetimes where your wealth does not hit $0 before age 85.
               </div>
@@ -295,7 +308,6 @@
             <p class="text-[11px] uppercase tracking-widest text-slate-400 font-bold">Target Corpus</p>
             <div class="relative">
               <svg class="w-3.5 h-3.5 text-slate-500 hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              <!-- Tooltip: dropped downwards, z-index boosted -->
               <div class="tooltip-content absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-52 p-2.5 bg-slate-800 text-slate-200 text-[10px] rounded-xl shadow-xl border border-white/10 leading-relaxed z-[100] normal-case tracking-normal">
                 Based on the Rule of 25. The exact pile of cash required on the day you retire to safely fund your Target Lifestyle Spend (adjusted for inflation) for the rest of your life.
               </div>
@@ -324,7 +336,8 @@
         </div>
       </div>
 
-      <div id="glidepath_card" class="glass-panel rounded-3xl p-6 grid grid-cols-2 gap-8 items-center transition-all duration-300 relative bg-slate-900">
+      <!-- DYNAMIC GLOW GLIDEPATH CONTAINER -->
+      <div id="glidepath_card" class="glass-panel rounded-3xl p-6 grid grid-cols-2 gap-8 items-center transition-all duration-500 relative bg-slate-900">
         <div>
           <div class="flex items-center mb-2 group">
             <h2 class="text-base font-bold tracking-wide text-white mr-2">Dynamic Asset Glidepath</h2>
@@ -446,11 +459,56 @@
       window.requestAnimationFrame(step);
     }
 
+    // LOCAL STORAGE SYNCHRONIZATION
+    function syncUIWithState() {
+      document.getElementById('in_age').value = state.current_age;
+      document.getElementById('val_age').textContent = state.current_age.toLocaleString();
+      document.getElementById('in_retire').value = state.retire_age;
+      document.getElementById('val_retire').textContent = state.retire_age.toLocaleString();
+      document.getElementById('in_savings').value = state.current_savings;
+      document.getElementById('val_savings').textContent = state.current_savings.toLocaleString();
+      document.getElementById('in_contrib').value = state.annual_contribution;
+      document.getElementById('val_contrib').textContent = state.annual_contribution.toLocaleString();
+      document.getElementById('in_spend').value = state.annual_spend;
+      document.getElementById('val_spend').textContent = state.annual_spend.toLocaleString();
+
+      const updateBadge = (id, val) => {
+        const badge = document.getElementById(id);
+        badge.textContent = val ? 'ACTIVE' : 'OFF';
+        badge.className = val ? 'px-2 py-1 rounded-md text-[10px] bg-rose-500 text-white font-bold drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'px-2 py-1 rounded-md text-[10px] bg-slate-800 text-slate-400';
+      };
+      updateBadge('badge_inflation', state.inflation_shock);
+      updateBadge('badge_medical', state.medical_shock);
+      updateBadge('badge_career', state.career_shock);
+    }
+
     async function triggerSimulation() {
+      // Save State on every trigger
+      localStorage.setItem('retireRightState', JSON.stringify(state));
+      
       const res = await fetch('/api/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
       const data = await res.json();
       updateDashboard(data);
     }
+
+    // SECRET PRESENTATION HOTKEY (Ctrl + Shift + D)
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        state.current_age = 55;
+        state.retire_age = 60;
+        state.current_savings = 10000;
+        state.annual_contribution = 0;
+        state.annual_spend = 150000;
+        state.inflation_shock = true;
+        state.medical_shock = true;
+        state.career_shock = true;
+        
+        syncUIWithState();
+        triggerSimulation();
+        showToast("🚨 DISASTER SCENARIO INJECTED FOR DEMO 🚨");
+      }
+    });
 
     function toggleAIModal(show) {
       const modal = document.getElementById('ai_modal');
@@ -537,8 +595,22 @@
         
         let riskLabel = "MODERATE";
         let riskColor = "#3b82f6";
-        if (data.allocation.data[0] >= 70) { riskLabel = "AGGRESSIVE"; riskColor = "#ef4444"; }
-        else if (data.allocation.data[0] <= 40) { riskLabel = "CONSERVATIVE"; riskColor = "#10b981"; }
+        const glideContainer = document.getElementById('glidepath_card');
+        
+        // Dynamic Risk Profiling Glow
+        if (data.allocation.data[0] >= 70) { 
+          riskLabel = "AGGRESSIVE"; 
+          riskColor = "#ef4444"; 
+          glideContainer.style.boxShadow = "0 0 40px rgba(239, 68, 68, 0.15) inset";
+        }
+        else if (data.allocation.data[0] <= 40) { 
+          riskLabel = "CONSERVATIVE"; 
+          riskColor = "#10b981"; 
+          glideContainer.style.boxShadow = "0 0 40px rgba(16, 185, 129, 0.15) inset";
+        }
+        else {
+          glideContainer.style.boxShadow = "none";
+        }
         
         pieInstance.options.elements.center.text = data.allocation.data[0] + '% Eq';
         pieInstance.options.elements.center.subText = riskLabel;
@@ -660,6 +732,13 @@
     document.getElementById('chat_submit').addEventListener('click', () => { sendMessage(document.getElementById('chat_input').value); document.getElementById('chat_input').value = ''; });
     document.getElementById('chat_input').addEventListener('keypress', (e) => { if (e.key === 'Enter') { sendMessage(e.target.value); e.target.value = ''; }});
 
+    // Boot Logic
+    const savedState = localStorage.getItem('retireRightState');
+    if (savedState) {
+        Object.assign(state, JSON.parse(savedState));
+        syncUIWithState();
+    }
+    
     initCharts();
     triggerSimulation();
   </script>
